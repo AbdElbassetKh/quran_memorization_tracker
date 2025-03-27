@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/memorization_plan.dart';
-import 'dart:convert';
 
 class PlanProvider with ChangeNotifier {
   static const String _startDateKey = 'plan_start_date';

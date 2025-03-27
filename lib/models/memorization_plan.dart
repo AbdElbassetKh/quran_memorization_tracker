@@ -44,10 +44,12 @@ class DailyPlan {
 class MemorizationPlan {
   final DateTime startDate;
   late List<DailyPlan> dailyPlans;
-  int currentJuzIndex = 0;
-  int currentHizbIndex = 0;
-  int currentThumnIndex = 0;
   int daysCompleted = 0;
+
+  // Content tracking indices
+  int _juzIndex = 0;
+  int _hizbIndex = 0;
+  int _thumnIndex = 0;
 
   MemorizationPlan({required this.startDate}) {
     _generatePlan();
@@ -62,6 +64,8 @@ class MemorizationPlan {
     int weeklyPrepCounter = 0;
     int nightlyPrepCounter = 0;
     int memorizationCounter = 0;
+    int memorizationThumnIndex =
+        0; // Added to track memorization Thumn separately
 
     // Generate plan for 1 year (approximate time to complete the Quran memorization)
     for (int day = 0; day < 365; day++) {
@@ -72,12 +76,15 @@ class MemorizationPlan {
       bool isRestDay = dailyReadingCounter % 10 == 0;
 
       if (!isRestDay) {
+        _juzIndex = (_juzIndex + 1) % 30;
+        _hizbIndex = (_hizbIndex + 1) % 60;
+
         tasks.add(
           PlanTask(
             type: PlanTaskType.dailyReading,
             title: 'القراءة اليومية',
             description: 'قراءة جزء كامل',
-            content: 'الجزء ${(day % 30) + 1}', // Cycle through all 30 Juz
+            content: 'الجزء ${_juzIndex == 0 ? 30 : _juzIndex}',
           ),
         );
 
@@ -86,7 +93,7 @@ class MemorizationPlan {
             type: PlanTaskType.dailyListening,
             title: 'الاستماع اليومي',
             description: 'سماع حزب واحد',
-            content: 'الحزب ${(day % 60) + 1}', // Cycle through all 60 Hizbs
+            content: 'الحزب ${_hizbIndex == 0 ? 60 : _hizbIndex}',
           ),
         );
       } else {
@@ -133,18 +140,20 @@ class MemorizationPlan {
         nightlyPrepCounter++;
         if (nightlyPrepCounter % 5 != 0) {
           // Rest every 5 days
-          // Simplified for example, actual implementation would track progress
-          final int thumnToPrep = ((day - 10) % 8) + 1;
-          final int hizbToPrep = ((day - 10) ~/ 8) + 1;
+          if (!isRestDay) {
+            _thumnIndex++;
+            final int currentThumn = ((_thumnIndex - 1) % 8) + 1;
+            final int currentHizb = ((_thumnIndex - 1) ~/ 8) + 1;
 
-          tasks.add(
-            PlanTask(
-              type: PlanTaskType.nightlyPreparation,
-              title: 'التحضير الليلي',
-              description: 'الاستماع وقراءة ثمن واحد (المراد حفظه غداً)',
-              content: 'الثمن $thumnToPrep من الحزب $hizbToPrep',
-            ),
-          );
+            tasks.add(
+              PlanTask(
+                type: PlanTaskType.nightlyPreparation,
+                title: 'التحضير الليلي',
+                description: 'الاستماع وقراءة ثمن واحد (المراد حفظه غداً)',
+                content: 'الثمن $currentThumn من الحزب $currentHizb',
+              ),
+            );
+          }
         }
       }
 
@@ -153,45 +162,50 @@ class MemorizationPlan {
         memorizationCounter++;
         if (memorizationCounter % 5 != 0) {
           // Rest every 5 days
-          // Simplified for example, actual implementation would track progress
-          final int thumnToMemorize = ((day - 11) % 8) + 1;
-          final int hizbToMemorize = ((day - 11) ~/ 8) + 1;
+          if (!isRestDay) {
+            memorizationThumnIndex++; // Increment our separate memorization counter
+            final int currentThumn = ((memorizationThumnIndex - 1) % 8) + 1;
+            final int currentHizb = ((memorizationThumnIndex - 1) ~/ 8) + 1;
 
-          tasks.add(
-            PlanTask(
-              type: PlanTaskType.memorization,
-              title: 'التحضير القبلي والحفظ',
-              description: 'قراءة ثمن 7 مرات ثم حفظه',
-              content: 'الثمن $thumnToMemorize من الحزب $hizbToMemorize',
-            ),
-          );
+            tasks.add(
+              PlanTask(
+                type: PlanTaskType.memorization,
+                title: 'التحضير القبلي والحفظ',
+                description: 'قراءة ثمن 7 مرات ثم حفظه',
+                content: 'الثمن $currentThumn من الحزب $currentHizb',
+              ),
+            );
+          }
         }
       }
 
       // Recent review: After memorizing first Hizb (8 Thumns)
       if (day >= 19) {
-        // 11 + 8 days to memorize first Hizb
-        tasks.add(
-          PlanTask(
-            type: PlanTaskType.recentReview,
-            title: 'مراجعة القريب',
-            description: 'قراءة غيبية لآخر حزبين تم حفظهما',
-            content: 'الحزبان الأخيران',
-          ),
-        );
+        if (!isRestDay) {
+          tasks.add(
+            PlanTask(
+              type: PlanTaskType.recentReview,
+              title: 'مراجعة القريب',
+              description: 'قراءة غيبية لآخر حزبين تم حفظهما',
+              content:
+                  'الحزبان ${(memorizationThumnIndex ~/ 8)} و ${(memorizationThumnIndex ~/ 8) - 1}',
+            ),
+          );
+        }
       }
 
       // Distant review: After a new Hizb enters recent review
       if (day >= 27) {
-        // 19 + 8 days to memorize second Hizb
-        tasks.add(
-          PlanTask(
-            type: PlanTaskType.distantReview,
-            title: 'مراجعة البعيد',
-            description: 'قراءة غيبية خلال 10 أيام لما حفظ قبل آخر حزبين',
-            content: 'المحفوظ السابق',
-          ),
-        );
+        if (!isRestDay) {
+          tasks.add(
+            PlanTask(
+              type: PlanTaskType.distantReview,
+              title: 'مراجعة البعيد',
+              description: 'قراءة غيبية خلال 10 أيام لما حفظ قبل آخر حزبين',
+              content: 'الأحزاب 1 إلى ${(memorizationThumnIndex ~/ 8) - 2}',
+            ),
+          );
+        }
       }
 
       dailyPlans.add(

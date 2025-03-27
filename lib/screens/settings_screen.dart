@@ -192,29 +192,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _createNewPlan(BuildContext context) {
-    // Capture a reference to the context and then use it within the async callback
-    final capturedContext = context;
-
-    showDatePicker(
-      context: capturedContext,
+  Future<void> _createNewPlan(BuildContext context) async {
+    final selectedDate = await showDatePicker(
+      context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
-    ).then((selectedDate) {
-      if (selectedDate != null && mounted) {
-        final provider = Provider.of<PlanProvider>(
-          capturedContext,
-          listen: false,
-        );
-        provider.createNewPlan(selectedDate);
+    );
 
-        if (mounted) {
-          ScaffoldMessenger.of(capturedContext).showSnackBar(
-            const SnackBar(content: Text('تم إنشاء خطة حفظ جديدة')),
-          );
-        }
+    if (selectedDate != null && mounted) {
+      final provider = Provider.of<PlanProvider>(context, listen: false);
+      provider.createNewPlan(selectedDate);
+
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('تم إنشاء خطة حفظ جديدة')));
       }
-    });
+    }
   }
 }

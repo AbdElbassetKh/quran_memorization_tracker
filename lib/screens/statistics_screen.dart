@@ -191,10 +191,7 @@ class StatisticsScreen extends StatelessWidget {
   }
 
   void _createNewPlan(BuildContext context) {
-    // For a StatelessWidget, we can use a variable to ensure we don't capture the BuildContext
     final BuildContext capturedContext = context;
-
-    // Instead of using then, use async-await with a separate function
     _showDatePickerAndCreatePlan(capturedContext);
   }
 
@@ -206,7 +203,9 @@ class StatisticsScreen extends StatelessWidget {
       lastDate: DateTime(2030),
     );
 
-    if (selectedDate != null) {
+    // Since this is a StatelessWidget, we don't have a mounted property
+    // Instead, we'll check if the widget is still in the tree by checking if the context is mounted
+    if (selectedDate != null && context.mounted) {
       final provider = Provider.of<PlanProvider>(context, listen: false);
       provider.createNewPlan(selectedDate);
     }

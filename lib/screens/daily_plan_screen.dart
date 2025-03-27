@@ -182,24 +182,19 @@ class _DailyPlanScreenState extends State<DailyPlanScreen> {
     );
   }
 
-  void _createNewPlan(BuildContext context) {
-    // Store a reference to the context
-    final currentContext = context;
-
-    showDatePicker(
-      context: currentContext,
+  void _createNewPlan(BuildContext context) async {
+    final selectedDate = await showDatePicker(
+      context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
-    ).then((selectedDate) {
-      if (selectedDate != null && mounted) {
-        // Use the stored context to avoid using BuildContext across async gap
-        final provider = Provider.of<PlanProvider>(
-          currentContext,
-          listen: false,
-        );
-        provider.createNewPlan(selectedDate);
-      }
-    });
+    );
+
+    if (selectedDate != null && mounted) {
+      Provider.of<PlanProvider>(
+        context,
+        listen: false,
+      ).createNewPlan(selectedDate);
+    }
   }
 }
