@@ -138,18 +138,11 @@ class StatisticsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             Text(
-              'الأجزاء المحفوظة',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 10),
-            _buildMemorizationPartsGrid(context, provider, 30), // 30 جزء
-            const SizedBox(height: 20),
-            Text(
               'الأحزاب المحفوظة',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 10),
-            _buildMemorizationPartsGrid(context, provider, 60), // 60 حزب
+            _buildMemorizationPartsGrid(context, provider),
           ],
         ),
       ),
@@ -159,7 +152,6 @@ class StatisticsScreen extends StatelessWidget {
   Widget _buildMemorizationPartsGrid(
     BuildContext context,
     PlanProvider provider,
-    int count,
   ) {
     return GridView.builder(
       shrinkWrap: true,
@@ -170,9 +162,9 @@ class StatisticsScreen extends StatelessWidget {
         crossAxisSpacing: 8,
         mainAxisSpacing: 8,
       ),
-      itemCount: count,
+      itemCount: 60, // Total number of Hizbs
       itemBuilder: (context, index) {
-        final isMemorized = _isPartMemorized(provider, index, count == 30);
+        final isMemorized = _isPartMemorized(provider, index);
         return Container(
           decoration: BoxDecoration(
             color:
@@ -195,24 +187,14 @@ class StatisticsScreen extends StatelessWidget {
     );
   }
 
-  bool _isPartMemorized(PlanProvider provider, int index, bool isJuz) {
-    if (isJuz) {
-      // التحقق من حفظ الجزء
-      final juzTasks = provider
-          .getCompletedTasksByType(PlanTaskType.memorization)
-          .where(
-            (task) => task.content.toString().contains('الجزء ${index + 1}'),
-          );
-      return juzTasks.isNotEmpty;
-    } else {
-      // التحقق من حفظ الحزب
-      final hizbTasks = provider
-          .getCompletedTasksByType(PlanTaskType.memorization)
-          .where(
-            (task) => task.content.toString().contains('الحزب ${index + 1}'),
-          );
-      return hizbTasks.isNotEmpty;
-    }
+  bool _isPartMemorized(PlanProvider provider, int index) {
+    // التحقق من حفظ الحزب
+    final hizbTasks = provider
+        .getCompletedTasksByType(PlanTaskType.memorization)
+        .where(
+          (task) => task.content.toString().contains('الحزب ${index + 1}'),
+        );
+    return hizbTasks.isNotEmpty;
   }
 
   void _createNewPlan(BuildContext context) {
