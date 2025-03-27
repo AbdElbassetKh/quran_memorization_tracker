@@ -106,9 +106,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder:
           (context) => AlertDialog(
-            title: const Text('بدء خطة جديدة'),
+            title: const Text('إعادة ضبط التقدم'),
             content: const Text(
-              'هل أنت متأكد من أنك تريد بدء خطة حفظ جديدة؟ سيتم فقدان جميع بيانات التقدم الحالية.',
+              'هل أنت متأكد من أنك تريد إعادة ضبط تقدم الحفظ؟ سيتم فقدان جميع بيانات التقدم الحالية.',
             ),
             actions: [
               TextButton(
@@ -117,8 +117,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               ElevatedButton(
                 onPressed: () {
+                  final provider = Provider.of<PlanProvider>(
+                    context,
+                    listen: false,
+                  );
+                  provider.resetProgress();
                   Navigator.pop(context);
-                  _createNewPlan(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('تم إعادة ضبط التقدم')),
+                  );
                 },
                 child: const Text('تأكيد'),
               ),

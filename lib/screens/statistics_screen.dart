@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/plan_provider.dart';
+import '../models/memorization_plan.dart';
 
 class StatisticsScreen extends StatelessWidget {
   const StatisticsScreen({super.key});
@@ -35,43 +36,48 @@ class StatisticsScreen extends StatelessWidget {
           final totalDays = provider.plan!.dailyPlans.length;
           final completionPercentage = provider.plan!.completionPercentage;
 
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Card(
-                  elevation: 4,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'ملخص التقدم',
-                          style: Theme.of(context).textTheme.headlineMedium,
-                        ),
-                        const SizedBox(height: 20),
-                        _buildProgressIndicator(context, completionPercentage),
-                        const SizedBox(height: 20),
-                        _buildStatItem(
-                          context,
-                          'الأيام المكتملة',
-                          '$daysCompleted من $totalDays',
-                        ),
-                        const SizedBox(height: 10),
-                        _buildStatItem(
-                          context,
-                          'نسبة الإكمال',
-                          '${completionPercentage.toStringAsFixed(2)}%',
-                        ),
-                      ],
+          return SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Card(
+                    elevation: 4,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'ملخص التقدم',
+                            style: Theme.of(context).textTheme.headlineMedium,
+                          ),
+                          const SizedBox(height: 20),
+                          _buildProgressIndicator(
+                            context,
+                            completionPercentage,
+                          ),
+                          const SizedBox(height: 20),
+                          _buildStatItem(
+                            context,
+                            'الأيام المكتملة',
+                            '$daysCompleted من $totalDays',
+                          ),
+                          const SizedBox(height: 10),
+                          _buildStatItem(
+                            context,
+                            'نسبة الإكمال',
+                            '${completionPercentage.toStringAsFixed(2)}%',
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                _buildMemorizationProgress(context, provider),
-              ],
+                  const SizedBox(height: 20),
+                  _buildMemorizationProgress(context, provider),
+                ],
+              ),
             ),
           );
         },
@@ -119,8 +125,6 @@ class StatisticsScreen extends StatelessWidget {
     BuildContext context,
     PlanProvider provider,
   ) {
-    // This would be implemented with real data tracking which parts
-    // have been memorized. For now, we'll create a placeholder:
     return Card(
       elevation: 4,
       child: Padding(
@@ -138,21 +142,25 @@ class StatisticsScreen extends StatelessWidget {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 10),
-            _buildPartsGrid(context, 30), // 30 Juz
+            _buildMemorizationPartsGrid(context, provider, 30), // 30 جزء
             const SizedBox(height: 20),
             Text(
               'الأحزاب المحفوظة',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 10),
-            _buildPartsGrid(context, 60), // 60 Hizb
+            _buildMemorizationPartsGrid(context, provider, 60), // 60 حزب
           ],
         ),
       ),
     );
   }
 
-  Widget _buildPartsGrid(BuildContext context, int count) {
+  Widget _buildMemorizationPartsGrid(
+    BuildContext context,
+    PlanProvider provider,
+    int count,
+  ) {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -164,10 +172,7 @@ class StatisticsScreen extends StatelessWidget {
       ),
       itemCount: count,
       itemBuilder: (context, index) {
-        // Placeholder for memorization status - would be replaced
-        // with real tracking data
-        final isMemorized = index < 5; // First 5 parts for demonstration
-
+        final isMemorized = _isPartMemorized(provider, index, count == 30);
         return Container(
           decoration: BoxDecoration(
             color:
@@ -190,9 +195,28 @@ class StatisticsScreen extends StatelessWidget {
     );
   }
 
+  bool _isPartMemorized(PlanProvider provider, int index, bool isJuz) {
+    if (isJuz) {
+      // التحقق من حفظ الجزء
+      final juzTasks = provider
+          .getCompletedTasksByType(PlanTaskType.memorization)
+          .where(
+            (task) => task.content.toString().contains('الجزء ${index + 1}'),
+          );
+      return juzTasks.isNotEmpty;
+    } else {
+      // التحقق من حفظ الحزب
+      final hizbTasks = provider
+          .getCompletedTasksByType(PlanTaskType.memorization)
+          .where(
+            (task) => task.content.toString().contains('الحزب ${index + 1}'),
+          );
+      return hizbTasks.isNotEmpty;
+    }
+  }
+
   void _createNewPlan(BuildContext context) {
-    final BuildContext capturedContext = context;
-    _showDatePickerAndCreatePlan(capturedContext);
+    _showDatePickerAndCreatePlan(context);
   }
 
   Future<void> _showDatePickerAndCreatePlan(BuildContext context) async {
@@ -203,8 +227,6 @@ class StatisticsScreen extends StatelessWidget {
       lastDate: DateTime(2030),
     );
 
-    // Since this is a StatelessWidget, we don't have a mounted property
-    // Instead, we'll check if the widget is still in the tree by checking if the context is mounted
     if (selectedDate != null && context.mounted) {
       final provider = Provider.of<PlanProvider>(context, listen: false);
       provider.createNewPlan(selectedDate);

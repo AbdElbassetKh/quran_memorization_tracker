@@ -1,13 +1,16 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import '../models/memorization_plan.dart';
 
 class PlanProvider with ChangeNotifier {
   static const String _startDateKey = 'plan_start_date';
   static const String _completedDaysKey = 'completed_days';
+  static const String _completedTasksKey = 'completed_tasks';
 
   MemorizationPlan? _plan;
   bool _isLoading = true;
+  Map<String, bool> _completedTasks = {};
 
   PlanProvider() {
     _loadPlan();
@@ -36,6 +39,16 @@ class PlanProvider with ChangeNotifier {
           _plan!.markDailyPlanAsCompleted(date);
         }
       }
+
+      // Load completed tasks
+      final completedTasksStr = prefs.getString(_completedTasksKey);
+      if (completedTasksStr != null) {
+        _completedTasks = Map<String, bool>.from(
+          Map<String, dynamic>.from(
+            json.decode(completedTasksStr),
+          ).map((key, value) => MapEntry(key, value as bool)),
+        );
+      }
     }
 
     _isLoading = false;
@@ -46,11 +59,18 @@ class PlanProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
+    // Clear all existing data
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear(); // Clear all stored data
+
+    // Reset internal state
+    _completedTasks = {};
     _plan = MemorizationPlan(startDate: startDate);
 
-    final prefs = await SharedPreferences.getInstance();
+    // Save new plan data
     await prefs.setString(_startDateKey, startDate.toIso8601String());
     await prefs.setStringList(_completedDaysKey, []);
+    await prefs.setString(_completedTasksKey, json.encode(_completedTasks));
 
     _isLoading = false;
     notifyListeners();
@@ -73,6 +93,19 @@ class PlanProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> markTaskCompleted(String taskKey, bool completed) async {
+    _completedTasks[taskKey] = completed;
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_completedTasksKey, json.encode(_completedTasks));
+
+    notifyListeners();
+  }
+
+  bool isTaskCompleted(String taskKey) {
+    return _completedTasks[taskKey] ?? false;
+  }
+
   DailyPlan getTodaysPlan() {
     if (_plan == null) return DailyPlan(date: DateTime.now(), tasks: []);
 
@@ -83,5 +116,43 @@ class PlanProvider with ChangeNotifier {
     if (_plan == null) return DailyPlan(date: date, tasks: []);
 
     return _plan!.getDailyPlan(date);
+  }
+
+  List<PlanTask> getCompletedTasksByType(PlanTaskType type) {
+    if (_plan == null) return [];
+
+    List<PlanTask> completedTasks = [];
+    for (var dailyPlan in _plan!.dailyPlans) {
+      for (var task in dailyPlan.tasks) {
+        if (task.type == type) {
+          final taskKey =
+              '${dailyPlan.date.toIso8601String()}_${task.type.toString()}_${task.title}';
+          if (_completedTasks[taskKey] == true) {
+            completedTasks.add(task);
+          }
+        }
+      }
+    }
+    return completedTasks;
+  }
+
+  void resetProgress() async {
+    _isLoading = true;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_completedDaysKey);
+    await prefs.remove(_completedTasksKey);
+
+    _completedTasks = {};
+    if (_plan != null) {
+      _plan!.daysCompleted = 0;
+      for (var plan in _plan!.dailyPlans) {
+        plan.isCompleted = false;
+      }
+    }
+
+    _isLoading = false;
+    notifyListeners();
   }
 }

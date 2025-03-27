@@ -37,22 +37,30 @@ class _DailyPlanScreenState extends State<DailyPlanScreen> {
         _tasks = dailyPlan.tasks;
         _completedTasks = {
           for (var task in _tasks)
-            '${task.type.toString()}_${task.title}': dailyPlan.isCompleted,
+            '${task.type.toString()}_${task.title}': provider.isTaskCompleted(
+              '${_selectedDate.toIso8601String()}_${task.type.toString()}_${task.title}',
+            ),
         };
       });
     }
   }
 
   void _toggleTaskCompletion(PlanTask task) {
-    final taskKey = '${task.type.toString()}_${task.title}';
+    final taskKey =
+        '${_selectedDate.toIso8601String()}_${task.type.toString()}_${task.title}';
+    final newStatus =
+        !(_completedTasks['${task.type.toString()}_${task.title}'] ?? false);
+
     setState(() {
-      _completedTasks[taskKey] = !(_completedTasks[taskKey] ?? false);
+      _completedTasks['${task.type.toString()}_${task.title}'] = newStatus;
     });
+
+    final provider = Provider.of<PlanProvider>(context, listen: false);
+    provider.markTaskCompleted(taskKey, newStatus);
 
     // Check if all tasks are completed
     final allCompleted = _completedTasks.values.every((completed) => completed);
     if (allCompleted) {
-      final provider = Provider.of<PlanProvider>(context, listen: false);
       provider.markDayAsCompleted(_selectedDate);
     }
   }
